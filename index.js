@@ -1,14 +1,13 @@
-const { json } = require("express")
-const express = require("express")
-const morgan = require('morgan')
-const cors = require('cors')
+import express, { json } from "express"
+import morgan, { token } from 'morgan'
+import cors from 'cors'
 
 const app = express()
 
-app.use(express.json())
+app.use(json())
 app.use(cors)
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
-morgan.token(
+token(
     "body",
     (req) => JSON.stringify(req.body)
 )
