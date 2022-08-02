@@ -108,7 +108,7 @@ app.post("/api/persons",
             number: body.number
         }
         persons = persons.concat(entry)
-        response.json(persons)
+        response.json(entry)
     }
 )
 
