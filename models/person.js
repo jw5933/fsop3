@@ -12,8 +12,15 @@ mongoose.connect(url)
     })
 
 const personSchema = new mongoose.Schema({
-    name: String,
-    number: String,
+    name: {
+        type: String,
+        required: true,
+        minLength: 3
+    },
+    number: {
+        type: String,
+        required: true
+    },
   });
   //toJSON is automactically called by JSON.stringify, which is called by express' JSON()
   personSchema.set('toJSON', { 

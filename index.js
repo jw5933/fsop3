@@ -102,29 +102,19 @@ app.delete("/api/persons/:id",
 )
 
 app.post("/api/persons",
-    (request, response) => {
+    (request, response, next) => {
         const body = request.body
-        // if (!body.name || !body.number){
-        //     return response.status(404).json(
-        //         {error: 'Missing name or number.'}
-        //     )
-        // }
 
-        // const newId = Math.floor(Math.random()*(100) + 1);
-        // if (persons.find(person => person.id === newId)){
-        //     return response.status(404).json(
-        //         {error: 'Could not generate appropriate id.'}
-        //     )
-        // }
         const entry = new Person({
             name: body.name,
             number: body.number,
         })
-        //persons = persons.concat(entry)
 
-        entry.save().then(savedPerson => {
-            response.json(savedPerson)
-        })
+        entry.save()
+            .then(savedPerson => {
+                response.json(savedPerson)
+            })
+            .catch(error => next(error))
     }
 )
 
@@ -136,7 +126,7 @@ app.put("/api/persons/:id",
             number: body.number,
         }
 
-        Person.findByIdAndUpdate(request.params.id, person, {new: true})
+        Person.findByIdAndUpdate(request.params.id, person, {new: true, runValidators: true, context: 'query'})
             .then(person => {
                 response.json(person)
             })
@@ -162,6 +152,10 @@ const errorHandler = (error, request, response, next) =>{
     console.log(error)
     if (error.name === "CastError"){
         return response.status(400).send({error: "malformed id"})
+    }
+    if (error.name === "ValidationError"){
+        return response.status(400).send(
+            {error: error.message})
     }
     next(error)
 }
