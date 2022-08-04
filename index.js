@@ -1,7 +1,10 @@
+require('dotenv').config()
 const express = require("express")
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
+const Person = require('./models/person')
+const { response } = require('express')
 
 let persons = [
     { 
@@ -30,7 +33,8 @@ app.use(cors())
 app.use(express.json())
 app.use(express.static('build'))
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
-
+//using next executes the middleware succeeding current
+//if theres none
 morgan.token(
     "body",
     (req) => JSON.stringify(req.body)
@@ -44,9 +48,12 @@ app.get("/",
 
 app.get("/api/persons",
     (request, response) => {
-        response.json(persons)
+        Person.find({}).then (persons => {
+            response.json(persons)
+        })
     }
 )
+
 app.get("/info",
     (request, response) => {
         response.send(
@@ -60,62 +67,102 @@ app.get("/info",
 )
 
 app.get("/api/persons/:id",
-    (request, response) => {
-        const id = Number(request.params.id)
-        const entry = persons.find(person => person.id === id)
-        if (entry)
-            response.json(entry)
-        else
-            response.status(404).end()
+    (request, response, next) => {
+        // const id = Number(request.params.id)
+        // const entry = persons.find(person => person.id === id)
+        // if (entry)
+        //     response.json(entry)
+        // else
+        //     response.status(404).end()
+        Person.findById(request.params.id)
+        .then(entry => {
+            if (entry) response.json(entry)
+            else response.status(404).end()
+        })
+        // .catch(err =>{
+        //     console.log(err)
+        //     response.status(400).send({error: "malformed id"})
+        //     //500 internal server error
+        // })
+        .catch(error => next(error))
     }
 )
 
 app.delete("/api/persons/:id",
-    (request, response) => {
-        const id = Number(request.params.id)
-        persons = persons.filter(person => person.id !== id)
-        response.status(204).end()
+    (request, response, next) => {
+        // const id = Number(request.params.id)
+        // persons = persons.filter(person => person.id !== id)
+        // response.status(204).end()
+        Person.findByIdAndRemove(request.params.id)
+            .then(result => {
+                response.status(204).end()
+            })
+            .catch(error => next(error))
     }
 )
 
 app.post("/api/persons",
     (request, response) => {
         const body = request.body
-        if (!body.name || !body.number){
-            return response.status(404).json(
-                {error: 'Missing name or number.'}
-            )
-        }
+        // if (!body.name || !body.number){
+        //     return response.status(404).json(
+        //         {error: 'Missing name or number.'}
+        //     )
+        // }
 
-        const re = new RegExp(`^${body.name}`, 'i')
-        if (persons.filter(person => person.name.match(re)).length > 0){
-            return response.status(404).json(
-                {error: 'Entry already exists. Name must be unique.'}
-            )
-            .end()
-        }
-
-        const newId = Math.floor(Math.random()*(100) + 1);
-        if (persons.find(person => person.id === newId)){
-            return response.status(404).json(
-                {error: 'Could not generate appropriate id.'}
-            )
-        }
-
-        const entry = {
-            id: newId,
+        // const newId = Math.floor(Math.random()*(100) + 1);
+        // if (persons.find(person => person.id === newId)){
+        //     return response.status(404).json(
+        //         {error: 'Could not generate appropriate id.'}
+        //     )
+        // }
+        const entry = new Person({
             name: body.name,
-            number: body.number
-        }
-        persons = persons.concat(entry)
-        response.json(entry)
+            number: body.number,
+        })
+        //persons = persons.concat(entry)
+
+        entry.save().then(savedPerson => {
+            response.json(savedPerson)
+        })
     }
 )
 
-const PORT = process.env.PORT || 3001
+app.put("/api/persons/:id", 
+    (request, response, next) => {
+        const body = request.body
+        const person = {
+            name: body.name,
+            number: body.number,
+        }
+
+        Person.findByIdAndUpdate(request.params.id, person, {new: true})
+            .then(person => {
+                response.json(person)
+            })
+            .catch(error => next(error))
+    }
+)
+/*
+By default, the updatedNote parameter of the event handler receives the original 
+document without the modifications. We added the optional { new: true } parameter,
+which will cause our event handler to be called with the new modified document 
+instead of the original.
+*/
+
+const PORT = process.env.PORT
 
 app.listen(
     PORT, () => {
         console.log(`Server running on port ${PORT}`)
     }
 )
+
+const errorHandler = (error, request, response, next) =>{
+    console.log(error)
+    if (error.name === "CastError"){
+        return response.status(400).send({error: "malformed id"})
+    }
+    next(error)
+}
+app.use(errorHandler)
