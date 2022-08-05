@@ -107,8 +107,9 @@ app.post("/api/persons",
         const re = new RegExp(`^${body.name}$`, 'i')
         Person.find({name: re})
         .then (persons => {
-            if (persons)
-                return response.status(400).send({error: `${body.name} already exists in the phonebook.`})
+            if (persons.length > 0){
+                return response.status(400).send(`${body.name} already exists in the phonebook.`).end()
+            }
             else{
                 const entry = new Person({
                     name: body.name,
