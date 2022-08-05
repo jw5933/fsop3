@@ -104,17 +104,24 @@ app.delete("/api/persons/:id",
 app.post("/api/persons",
     (request, response, next) => {
         const body = request.body
-
-        const entry = new Person({
-            name: body.name,
-            number: body.number,
+        const re = new RegExp(`^${body.name}$`, 'i')
+        Person.find({name: re})
+        .then (persons => {
+            if (persons)
+                return response.status(400).send({error: `${body.name} already exists in the phonebook.`})
+            else{
+                const entry = new Person({
+                    name: body.name,
+                    number: body.number,
+                })
+        
+                entry.save()
+                    .then(savedPerson => {
+                        response.json(savedPerson)
+                    })
+                    .catch(error => next(error))
+            }
         })
-
-        entry.save()
-            .then(savedPerson => {
-                response.json(savedPerson)
-            })
-            .catch(error => next(error))
     }
 )
 
@@ -149,13 +156,11 @@ app.listen(
 )
 
 const errorHandler = (error, request, response, next) =>{
-    console.log(error)
     if (error.name === "CastError"){
         return response.status(400).send({error: "malformed id"})
     }
     if (error.name === "ValidationError"){
-        return response.status(400).send(
-            {error: error.message})
+        return response.status(400).send(error.message)
     }
     next(error)
 }

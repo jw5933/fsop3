@@ -19,7 +19,12 @@ const personSchema = new mongoose.Schema({
     },
     number: {
         type: String,
-        required: true
+        required: true,
+        minLength: 8,
+        validate: {
+            validator: (val) => /^\d{2}|\d{3}-\d+$ | ^\d+$/.test(val),
+            message: "Phone number is invalid."
+        }
     },
   });
   //toJSON is automactically called by JSON.stringify, which is called by express' JSON()
